@@ -38,6 +38,20 @@ namespace Testinterface
             r.ReceiveValidation(new MoveOrder(new Moveable(new Position(0, 0, r), 2), Direction.Right));
             r.ReceiveInput(new MoveOrder(new Moveable(new Position(0, 0, r), 2), Direction.Left));
             r.ReceiveValidation(new MoveOrder(new Moveable(new Position(0, 0, r), 3), Direction.Down));
+            r.Execute(ExecType.Substep);
+            r.Execute(ExecType.Substep);
+            r.Execute(ExecType.Substep);
+            r.Reset();
+            r.ReceiveInput(new MoveOrder(new Moveable(new Position(0, 0, r), 1), Direction.Left));
+            r.ReceiveValidation(new MoveOrder(new Moveable(new Position(0, 0, r), 2), Direction.Right));
+            r.ReceiveInput(new MoveOrder(new Moveable(new Position(0, 0, r), 2), Direction.Up));
+            r.ReceiveValidation(new MoveOrder(new Moveable(new Position(0, 0, r), 3), Direction.Down));
+            r.Execute(ExecType.Complete);
+            r.Reset();
+            r.ReceiveInput(new MoveOrder(new Moveable(new Position(0, 0, r), 1), Direction.Left));
+            r.ReceiveValidation(new MoveOrder(new Moveable(new Position(0, 0, r), 2), Direction.Right));
+            r.ReceiveInput(new MoveOrder(new Moveable(new Position(0, 0, r), 2), Direction.Left));
+            r.ReceiveValidation(new MoveOrder(new Moveable(new Position(0, 0, r), 3), Direction.Down));
             r.Execute(ExecType.Complete);
         }
     }

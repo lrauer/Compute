@@ -98,5 +98,7 @@ namespace Compute
         public abstract void ReceiveInput(MoveOrder moveOrder);
 
         public abstract void ReleaseOutput(MoveOrder moveOrder);
+
+        public abstract void Reset();
     }
 }

@@ -18,7 +18,7 @@ namespace Compute
 
             Creation += getEventsystem().HandleCreation;
             Created();
-            //todo load startkonfiguration
+            //todo load startkonfiguration (oder in jedem place machen da dort infos über childs liegen?)
         }
 
         Eventsystem _Eventsystem;
@@ -27,6 +27,14 @@ namespace Compute
         {
             get { return _Eventsystem; }
             set { _Eventsystem = value; }
+        }
+
+        SystemState _CurrentState = SystemState.Ready;
+
+        internal SystemState CurrentState
+        {
+            get { return _CurrentState; }
+            set { _CurrentState = value; }
         }
 
         Queue<MoveOrder> _InputQueue = new Queue<MoveOrder>();
@@ -44,11 +52,6 @@ namespace Compute
             set { _ValidationQueue = value; }
         }
 
-        //WEITERE TODOs (habe angefangen aber noch nicht fertig:
-        //enventsystem in root haben und statt exeptions immer events erzeugen die im eventsystem aufgehen 
-        //+ überall events einbauen die interessant sein könnten damit gui darauf reagieren und anzeige aktualisieren kann
-
-
          Place _Rootplace;
 
          public Place Rootplace
@@ -56,8 +59,6 @@ namespace Compute
              get { return _Rootplace; }
              set { 
                  _Rootplace = value;
-                 //new ticks are prepared when output is full, so signify it for first tick
-                 tickoutput = _Rootplace.OutputCount;
              }
          }
 
@@ -67,17 +68,26 @@ namespace Compute
             throw new NotImplementedException("The Root doesnt need to prepare");
         }
 
-        int tickoutput;
+        int Tickoutput;
 
         public void Execute(ExecType execType)
         {
             try
             {
-                if (Rootplace.OutputCount == tickoutput)
+                if (CurrentState == SystemState.Broken || CurrentState == SystemState.Completed)
                 {
-                    tickoutput = 0;
+                    throw new ActionInvalidException("The System must be resetted first", this);
+                }
+                if (Rootplace.OutputCount == Tickoutput || CurrentState != SystemState.Running)
+                {
+                    CurrentState = SystemState.Running;
+                    Tickoutput = 0;
                     while (Rootplace.CurrentInput.Count < Rootplace.InputCount)
                     {
+                        if (InputQueue.Count == 0)
+                        {
+                            throw new ActionInvalidException("Can't process without enough inputs", this);
+                        }
                         Rootplace.ReceiveInput(InputQueue.Dequeue());
                         //TODO position in queue event
                         Rootplace.PrepareTick();
@@ -98,15 +108,27 @@ namespace Compute
                 }
                 else
                 {
+                    CurrentState = SystemState.Completed;
                     //TODO event dass fertig
                 }
             }
-            catch
+            catch (ActionInvalidException e)
             {
-                //TODO hier event erzeugen, dass fehler in puzzleanordnung
-                //todo evtl neu exeption typ(en) und nur diese abfangen
-                int i = 1;
+                //signal that broken, so no step can be executed anymore
+                CurrentState = SystemState.Broken;
+                //TODO hier event erzeugen, dass fehler in puzzleanordnung mit sender position und nachricht
             }
+        }
+
+        //removes all inputs from the System and reverts to default state
+        public override void Reset()
+        {
+            CurrentState = SystemState.Ready;
+            Rootplace.Reset();
+            InputQueue.Clear();
+            ValidationQueue.Clear();
+            Tickoutput = 0;
+            //TODO event, dass zurückgesetzt
         }
 
         public override void ExecuteTick()
@@ -128,10 +150,15 @@ namespace Compute
 
         public override void ReleaseOutput(MoveOrder moveOrder)
         {
-            tickoutput++;
+            Tickoutput++;
             //TODO position in queue event
             //TODO event mit bool ob richtig
             //TODO falls beide queues leer sind event dass komplett fertig ist
+
+            if (ValidationQueue.Count == 0)
+            {
+                throw new ActionInvalidException("Need validationoutput for each input", this);
+            }
             if (moveOrder.CompareTo(ValidationQueue.Dequeue()))
             {
                 //richtig

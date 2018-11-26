@@ -31,13 +31,18 @@ namespace Compute
                 case 1:
                     return true;
                 default:
-                    throw new ArgumentException("Assemblyline can only process 1 input");
+                    throw new ActionInvalidException("This Object can only process 1 input",this);
             }
         }
 
         public override void ExecuteTick()
         {
             ReleaseOutput(new MoveOrder(CurrentInput[0],OutputDirections[0]));
+        }
+
+        public override void Reset()
+        {
+            CurrentInput.Clear();
         }
 
         public override void ReceiveInput(MoveOrder moveOrder)

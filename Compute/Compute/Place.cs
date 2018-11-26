@@ -60,8 +60,8 @@ namespace Compute
                 ReleasedOutput = 0;
                 return true;
             }
-           
-            throw new ArgumentException("This Place can only process "+InputCount+" inputs");
+
+            throw new ActionInvalidException("This Place can only process " + InputCount + " inputs",this);
         }
 
         //how much output is processed
@@ -77,9 +77,9 @@ namespace Compute
                 {
                     Substep();
                 }
-                catch (ArgumentException e)
+                catch (ActionInvalidException e)
                 {
-                    throw new ArgumentException("Place cant process its input: " + e.Message);
+                    throw new ActionInvalidException("Place cant process its input: " + e.Message,this);
                 }
             }
         }
@@ -87,7 +87,7 @@ namespace Compute
         //just do 1 tick for each child
         public void Substep()
         {
-            foreach (IPlaceable p in Children)
+            foreach (PlaceableObjekt p in Children)
             {
                 if (p.PrepareTick())
                     p.ExecuteTick();
@@ -98,6 +98,17 @@ namespace Compute
                 m.Target.ReceiveInput(new MoveOrder(m.Mover, m.Origin));
             }
             InputBuffer.Clear();
+        }
+
+        public override void Reset()
+        {
+            InputBuffer.Clear();
+            CurrentInput.Clear();
+            ReleasedOutput = 0;
+            foreach (PlaceableObjekt p in Children)
+            {
+                p.Reset();
+            }
         }
 
         public override void ReceiveInput(MoveOrder moveOrder)
@@ -164,7 +175,7 @@ namespace Compute
 
                 if (child == null)
                 {
-                    throw new ArgumentException("Can't input to empty position");
+                    throw new ActionInvalidException("Can't input to empty position", this);
                 }
                 //add to bufferlist with new parent
                 InputBuffer.Add(new MoveTarget(child, moveOrder.Objekt, moveOrder.Order));
