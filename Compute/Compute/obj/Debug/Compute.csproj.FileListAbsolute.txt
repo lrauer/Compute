@@ -1,0 +1,5 @@
+U:\Projekte\Compute\Compute\obj\Debug\Compute.csprojResolveAssemblyReference.cache
+U:\Projekte\Compute\Compute\bin\Debug\Compute.dll
+U:\Projekte\Compute\Compute\bin\Debug\Compute.pdb
+U:\Projekte\Compute\Compute\obj\Debug\Compute.dll
+U:\Projekte\Compute\Compute\obj\Debug\Compute.pdb
