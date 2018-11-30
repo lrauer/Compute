@@ -8,18 +8,20 @@ namespace Compute
 {
     public class Moveable: Worldobjekt
     {
-        int _Value;
+        event EventHandler<ValueEventArgs> ValueChanged;
 
-        public event EventHandler ValueChanged;
+        int _Value;  
 
         public int Value
         {
             get { return _Value; }
             set 
-            { 
+            {
+                int oldValue = _Value;
                 _Value = value; 
                 if(ValueChanged != null)
-                    ValueChanged.Invoke(this,EventArgs.Empty);
+                    ValueChanged.Invoke(this,new ValueEventArgs(oldValue,_Value, this));
+
             }
         }
 

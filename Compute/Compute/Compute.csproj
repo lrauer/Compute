@@ -42,6 +42,7 @@
     <Compile Include="ActionInvalidException.cs" />
     <Compile Include="AssemblyLine.cs" />
     <Compile Include="Comparer.cs" />
+    <Compile Include="ComputeController.cs" />
     <Compile Include="Direction.cs" />
     <Compile Include="Eventsystem.cs" />
     <Compile Include="ExecType.cs" />
@@ -53,10 +54,16 @@
     <Compile Include="Place.cs" />
     <Compile Include="PlaceableObjekt.cs" />
     <Compile Include="Position.cs" />
+    <Compile Include="PositionEventArgs.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="QueueEventArgs.cs" />
+    <Compile Include="QueueValidationEventArgs.cs" />
     <Compile Include="Returner.cs" />
     <Compile Include="Root.cs" />
     <Compile Include="SystemState.cs" />
+    <Compile Include="SystemStateEventArgs.cs" />
+    <Compile Include="SystemStateFailedEventArgs.cs" />
+    <Compile Include="ValueEventArgs.cs" />
     <Compile Include="Worldobjekt.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

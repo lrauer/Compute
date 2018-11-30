@@ -11,12 +11,50 @@ namespace Compute
 
 
         //List of the children that live inside this place
-        List<PlaceableObjekt> _Children = new List<PlaceableObjekt>();
+        List<PlaceableObjekt> Children = new List<PlaceableObjekt>();
 
-        public List<PlaceableObjekt> Children
+        public bool AddChild(PlaceableObjekt p)
         {
-            get { return _Children; }
-            set { _Children = value; }
+            if(GetChildAt(p.Position.PosX,p.Position.PosY) == null)
+            {
+                Children.Add(p);
+                return true;
+            }
+            return false;
+        }
+
+        public bool RemoveChild(int posX, int posY)
+        {
+            PlaceableObjekt p = GetChildAt(posX, posY);
+            if (p != null)
+            {
+                Children.Remove(p);
+                return true;
+            }
+            return false;
+        }
+
+        public bool ChangeChildPosition(int oldPosX,int oldPosY,int newPosX,int newPosY)
+        {
+            PlaceableObjekt p = GetChildAt(oldPosX, oldPosY);
+            if (p != null && GetChildAt(newPosX, newPosY) == null)
+            {
+                p.Position.Set(newPosX, newPosY);
+                return true;
+            }
+            return false;
+        }
+
+        public PlaceableObjekt GetChildAt(int posX, int posY)
+        {
+            foreach (PlaceableObjekt p in Children)
+            {
+                if (p.Position.PosX == posX && p.Position.PosY == posY)
+                {
+                    return p;
+                }
+            }
+            return null;
         }
 
         List<MoveTarget> _InputBuffer = new List<MoveTarget>();
@@ -52,7 +90,7 @@ namespace Compute
         public override bool PrepareTick()
         {
 
-            if (CurrentInput.Count == 0)
+            if (CurrentInput.Count < InputCount)
                 return false;
             if (CurrentInput.Count == InputCount)
             {
@@ -120,19 +158,19 @@ namespace Compute
             switch (oldDirection)
             {
                 case Direction.Left:
-                    moveOrder.Objekt.Position.Copy(Children[0].Position);
+                    moveOrder.Objekt.Position = Position.Copy(Children[0].Position);
                     Children[0].ReceiveInput(moveOrder);
                     break;
                 case Direction.Right:
-                    moveOrder.Objekt.Position.Copy(Children[1].Position);
+                    moveOrder.Objekt.Position = Position.Copy(Children[1].Position);
                     Children[1].ReceiveInput(moveOrder);
                     break;
                 case Direction.Up:
-                    moveOrder.Objekt.Position.Copy(Children[2].Position);
+                    moveOrder.Objekt.Position = Position.Copy(Children[2].Position);
                     Children[2].ReceiveInput(moveOrder);
                     break;
                 case Direction.Down:
-                    moveOrder.Objekt.Position.Copy(Children[3].Position);
+                    moveOrder.Objekt.Position = Position.Copy(Children[3].Position);
                     Children[3].ReceiveInput(moveOrder);
                     break;
             }
@@ -151,7 +189,7 @@ namespace Compute
             else
             {
                 //return it to level of this place before it will be input for the next child
-                moveOrder.Objekt.Position.Copy(moveOrder.Objekt.Position.Parent.Position);
+                moveOrder.Objekt.Position = Position.Copy(moveOrder.Objekt.Position.Parent.Position);
                 //determine the parent at target position
                 int x = moveOrder.Objekt.Position.PosX;
                 int y = moveOrder.Objekt.Position.PosY;

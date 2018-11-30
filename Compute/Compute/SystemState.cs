@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Compute
 {
-    enum SystemState
+    public enum SystemState
     {
         Ready,Running,Broken,Completed
     }

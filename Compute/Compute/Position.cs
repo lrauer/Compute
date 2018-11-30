@@ -8,7 +8,7 @@ namespace Compute
     public class Position
     {
 
-        public event EventHandler PositionChanged;
+        public event EventHandler<PositionEventArgs> PositionChanged;
 
         int _PosX;
 
@@ -16,10 +16,11 @@ namespace Compute
         {
             get { return _PosX; }
             set 
-            { 
+            {
+                int oldValue = _PosX;
                 _PosX = value;
                 if (PositionChanged != null)
-                    PositionChanged.Invoke(this, EventArgs.Empty);
+                    PositionChanged.Invoke(this, new PositionEventArgs(oldValue, _PosX, PosY,PosY,Parent, Parent));
             }
         }
 
@@ -30,9 +31,10 @@ namespace Compute
             get { return _PosY; }
             set 
             {
+                int oldValue = _PosY;
                 _PosY = value;
                 if (PositionChanged != null)
-                    PositionChanged.Invoke(this, EventArgs.Empty);
+                    PositionChanged.Invoke(this, new PositionEventArgs(PosX,PosX,oldValue,_PosY,Parent,Parent));
             }
         }
 
@@ -48,10 +50,13 @@ namespace Compute
         {
             get { return _Parent; }
             set 
-            { 
+            {
+                PlaceableObjekt oldValue = _Parent;
                 _Parent = value;
                 if (PositionChanged != null)
-                    PositionChanged.Invoke(this, EventArgs.Empty);
+                {
+                    PositionChanged.Invoke(this, new PositionEventArgs(PosX,PosX,PosY,PosY,oldValue,_Parent));
+                }
             }
         }
 
@@ -66,11 +71,9 @@ namespace Compute
             }
         }
 
-        public void Copy(Position position)
+        public static Position Copy(Position position)
         {
-            PosX = position.PosX;
-            PosY = position.PosY;
-            Parent = position.Parent;
+            return new Position(position.PosX, position.PosY, position.Parent);
         }
     }
 }

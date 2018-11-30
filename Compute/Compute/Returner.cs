@@ -11,10 +11,22 @@ namespace Compute
         public Returner(Position position, Direction output, bool destructable)
             : base(position, output, destructable)
         {
-
+            keep = new List<bool>();
         }
 
-        bool keep;
+        List<bool> keep;
+
+        public override bool PrepareTick()
+        {
+            //returner can process more than 1 input but will only output the first input per tick
+            switch (CurrentInput.Count)
+            {
+                case 0:
+                    return false;
+                default:
+                    return true;
+            }
+        }
 
         public override void ReceiveInput(MoveOrder moveOrder)
         {
@@ -23,28 +35,29 @@ namespace Compute
             moveOrder.Objekt.Position.Set(0, 0);
             if (moveOrder.Order == Direction.Parent)
             {
-                keep = true;
+                keep.Add(true);
             }
             else
             {
-                keep = false;
+                keep.Add(false);
             }
         }
 
         public override void ReleaseOutput(MoveOrder moveOrder)
         {
-            CurrentInput.Clear();
-            if (keep)
+            CurrentInput.RemoveAt(0);
+            if (keep[0])
             {
                 Position.Parent.ReleaseOutput(moveOrder);
             }
             else
             {
                 //set position of output to own position to return it 1 level
-                moveOrder.Objekt.Position.Copy(Position);
+                moveOrder.Objekt.Position = Position.Copy(Position);
                 moveOrder.Order = DirectionHelper.Invert(moveOrder.Order);
                 Position.Parent.ReleaseOutput(moveOrder);
             }
+            keep.RemoveAt(0);
         }
 
     }

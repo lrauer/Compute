@@ -6,5 +6,5 @@ using System.Threading.Tasks;
 
 namespace Compute
 {
-    public enum ExecType { Substep, Tick, Complete }
+    public enum ExecType { Substep, Tick, Complete, Reset }
 }

@@ -9,6 +9,14 @@ namespace Compute
     public class Root: PlaceableObjekt
     {
 
+        public event EventHandler<QueueEventArgs> InputQueueProgressed;
+        public event EventHandler<QueueValidationEventArgs> ValidationQueueProgressed;
+        public event EventHandler<QueueEventArgs> InputQueueEnqueued;
+        public event EventHandler<QueueEventArgs> ValidationQueueEnqueued;
+        public event EventHandler<SystemStateEventArgs> ExecuteFinished;
+        public event EventHandler<SystemStateFailedEventArgs> ExecuteFailed;
+        public event EventHandler<SystemStateEventArgs> SystemResetted;
+
         public Root(int inputs, int outputs, Eventsystem eventsystem)
             : base(new Position(0, 0, null))
         {
@@ -16,10 +24,25 @@ namespace Compute
             Rootplace = new Place(new Position(0, 0, this), false, inputs, outputs);
             Position = new Position(0,0,null);
 
-            Creation += getEventsystem().HandleCreation;
+            Creation += Eventsystem.HandleCreation;
+            InputQueueProgressed += Eventsystem.HandleSystemInput;
+            ValidationQueueProgressed += Eventsystem.HandleSystemOutput;
+            InputQueueEnqueued += Eventsystem.HandleInputReceived;
+            ValidationQueueEnqueued += Eventsystem.HandleOutputReceived;
+            ExecuteFinished += Eventsystem.HandleExecuteFinished;
+            ExecuteFailed += Eventsystem.HandleExecuteFailed;
+            SystemResetted += Eventsystem.HandleSystemResetted;
+
             Created();
-            //todo load startkonfiguration (oder in jedem place machen da dort infos über childs liegen?)
+            //TODO load startkonfiguration (oder in jedem place machen da dort infos über childs liegen?)
+            //TODO-- zusätzlich funktion zum laden/speichern von konfigurationen machen
         }
+
+        //
+        //
+        //TODO als nächstes kleine oberfläche machen die wie programm erzeugt und danach auf events reagiert um sich aufzubauen und zu aktualisieren (am einfachsten als text aus array [,] mit X und zahlen und so der immer aktialisiert wird)
+        //
+        //
 
         Eventsystem _Eventsystem;
 
@@ -70,54 +93,75 @@ namespace Compute
 
         int Tickoutput;
 
-        public void Execute(ExecType execType)
+        public bool Execute(ExecType execType)
         {
-            try
+            bool b = true;
+            if (execType == ExecType.Reset)
             {
-                if (CurrentState == SystemState.Broken || CurrentState == SystemState.Completed)
+                Reset();
+            }
+            else
+            {
+                try
                 {
-                    throw new ActionInvalidException("The System must be resetted first", this);
-                }
-                if (Rootplace.OutputCount == Tickoutput || CurrentState != SystemState.Running)
-                {
-                    CurrentState = SystemState.Running;
-                    Tickoutput = 0;
-                    while (Rootplace.CurrentInput.Count < Rootplace.InputCount)
+                    if (CurrentState == SystemState.Broken || CurrentState == SystemState.Completed)
                     {
-                        if (InputQueue.Count == 0)
+                        throw new ActionInvalidException("The System must be resetted first", this);
+                    }
+                    if (Rootplace.OutputCount == Tickoutput || CurrentState != SystemState.Running)
+                    {
+                        CurrentState = SystemState.Running;
+                        Tickoutput = 0;
+                        while (Rootplace.CurrentInput.Count < Rootplace.InputCount)
                         {
-                            throw new ActionInvalidException("Can't process without enough inputs", this);
+                            if (InputQueue.Count == 0)
+                            {
+                                throw new ActionInvalidException("Can't process without enough inputs", this);
+                            }
+                            MoveOrder m = InputQueue.Dequeue();
+                            Rootplace.ReceiveInput(m);
+                            InputQueueProgressed.Invoke(this, new QueueEventArgs(InputQueue,m,maxInputSize));
+                            Rootplace.PrepareTick();
                         }
-                        Rootplace.ReceiveInput(InputQueue.Dequeue());
-                        //TODO position in queue event
-                        Rootplace.PrepareTick();
+                    }
+                    if (execType == ExecType.Substep)
+                    {
+                        Rootplace.Substep();
+                    }
+                    else
+                    {
+                        ExecuteTick();
+                    }
+                    //if finshed stop
+                    if (InputQueue.Count == 0 && ValidationQueue.Count == 0)
+                    {
+                        CurrentState = SystemState.Completed;
                     }
                 }
-                if (execType == ExecType.Substep)
+                catch (ActionInvalidException e)
                 {
-                    Rootplace.Substep();
+                    b = false;
+                    //signal that broken, so no step can be executed anymore
+                    CurrentState = SystemState.Broken;
+                    //event with the position, state and Error
+                    ExecuteFailed.Invoke(this, new SystemStateFailedEventArgs(CurrentState,execType,e));
                 }
-                else
+                finally
                 {
-                    ExecuteTick();
-                }
-                // if complete continue with next input
-                if (execType == ExecType.Complete && InputQueue.Count > 0)
-                {
-                    Execute(execType);
-                }
-                else
-                {
-                    CurrentState = SystemState.Completed;
-                    //TODO event dass fertig
+                    // if exectype complete continue with next input
+                    if (execType == ExecType.Complete && InputQueue.Count > 0 && CurrentState == SystemState.Running)
+                    {
+                        Execute(execType);
+                    }
+                    //else we are finshed with this execution
+                    else
+                    {
+                        //event with the state that this Execution is finished
+                        ExecuteFinished.Invoke(this, new SystemStateEventArgs(CurrentState, execType));
+                    }
                 }
             }
-            catch (ActionInvalidException e)
-            {
-                //signal that broken, so no step can be executed anymore
-                CurrentState = SystemState.Broken;
-                //TODO hier event erzeugen, dass fehler in puzzleanordnung mit sender position und nachricht
-            }
+            return b;
         }
 
         //removes all inputs from the System and reverts to default state
@@ -127,8 +171,11 @@ namespace Compute
             Rootplace.Reset();
             InputQueue.Clear();
             ValidationQueue.Clear();
+            maxInputSize = 0;
+            maxValidationSize = 0;
             Tickoutput = 0;
-            //TODO event, dass zurückgesetzt
+            //event that system is resetted
+            SystemResetted.Invoke(this, new SystemStateEventArgs(CurrentState, ExecType.Reset));
         }
 
         public override void ExecuteTick()
@@ -136,39 +183,38 @@ namespace Compute
             Rootplace.ExecuteTick();
         }
 
+        int maxInputSize;
+
         public override void ReceiveInput(MoveOrder moveOrder)
         {
             InputQueue.Enqueue(moveOrder);
-            //TODO add to queue event
+            maxInputSize++;
+            //add to queue event
+            InputQueueEnqueued.Invoke(this, new QueueEventArgs(InputQueue,moveOrder,maxInputSize));
         }
+
+        int maxValidationSize;
 
         public void ReceiveValidation(MoveOrder moveOrder)
         {
             ValidationQueue.Enqueue(moveOrder);
-            //TODO add to queue event
+            maxValidationSize++;
+            //add to queue event
+            ValidationQueueEnqueued.Invoke(this, new QueueEventArgs(ValidationQueue, moveOrder, maxValidationSize));
         }
 
         public override void ReleaseOutput(MoveOrder moveOrder)
         {
             Tickoutput++;
-            //TODO position in queue event
-            //TODO event mit bool ob richtig
-            //TODO falls beide queues leer sind event dass komplett fertig ist
 
             if (ValidationQueue.Count == 0)
             {
                 throw new ActionInvalidException("Need validationoutput for each input", this);
             }
-            if (moveOrder.CompareTo(ValidationQueue.Dequeue()))
-            {
-                //richtig
-                int i = 1;
-            }
-            else
-            {
-                //falsch
-                int i = 1;
-            }
+
+            //send Event with expected and actual Moveorder for Comparison
+            ValidationQueueProgressed.Invoke(this, new QueueValidationEventArgs(ValidationQueue, ValidationQueue.Dequeue(), maxValidationSize, moveOrder));
+
         }
     }
 }

@@ -9,7 +9,7 @@ namespace Compute
     public abstract class Worldobjekt
     {
 
-        public event EventHandler Creation;
+        public event EventHandler<PositionEventArgs> Creation;
 
         public Worldobjekt(Position position)
         {
@@ -25,7 +25,7 @@ namespace Compute
         public void Created()
         {
             if (Creation != null)
-                Creation.Invoke(this, EventArgs.Empty);
+                Creation.Invoke(this, new PositionEventArgs(0,Position.PosX,0,Position.PosY,null,Position.Parent));
         }
 
         //current Position
